@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Set Geo-fence Location</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <style>
+    #map {
+      height: 500px;
+      width: 100%;
+    }
+    #radius {
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h3>Set Your Geo-fence Location and Radius</h3>
+  
+  <!-- Map container -->
+  <div id="map"></div>
+
+  <!-- Radius slider -->
+  <label for="radius">Set Radius (meters): </label>
+  <input type="range" id="radius" min="50" max="1000" value="100" step="10">
+  <span id="radiusValue">100</span> meters
+  <br><br>
+
+  <!-- Confirm button -->
+  <button id="confirmBtn">Confirm Geo-fence Location</button>
+
+  <script>
+    // Initialize the map centered on a default location
+    var map = L.map('map').setView([3.1390, 101.6869], 13);  // Kuala Lumpur as default location
+
+    // Load and display OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Add a draggable marker for the geo-fence
+    var marker = L.marker([3.1390, 101.6869], {draggable: true}).addTo(map);
+
+    // Add a circle to represent the geo-fence
+    var circle = L.circle([3.1390, 101.6869], {
+      radius: 100,  // Initial radius (100 meters)
+      color: 'blue',
+      fillColor: '#3f9bfc',
+      fillOpacity: 0.4
+    }).addTo(map);
+
+    // Update circle position when the marker is dragged
+    marker.on('drag', function(e) {
+      var newLatLng = marker.getLatLng();
+      circle.setLatLng(newLatLng);  // Update circle position to follow marker
+    });
+
+    // Update radius value as the slider changes
+    var radiusSlider = document.getElementById('radius');
+    var radiusValueDisplay = document.getElementById('radiusValue');
+
+    radiusSlider.oninput = function() {
+      var radius = this.value;
+      radiusValueDisplay.textContent = radius;
+      circle.setRadius(radius);  // Update circle radius dynamically
+    };
+
+    // Confirm button click event
+    document.getElementById('confirmBtn').onclick = function() {
+      var lat = marker.getLatLng().lat;
+      var lng = marker.getLatLng().lng;
+      var radius = radiusSlider.value;
+
+      // Send latitude, longitude, and radius back to Blynk
+      var blynkUrlLat = `https://sgp1.blynk.cloud/external/api/update?token=HBcyZC8F5uz_iDCXsiOUI-8lMCeCFnQd&v7=${lat},${lng},${radius}`;
+
+      // Send data to Blynk via simple GET request
+      fetch(blynkUrlLat);
+
+      alert(`Geo-fence location and radius have been sent to Blynk! \nLatitude: ${lat} \nLongitude: ${lng} \nRadius: ${radius} meters`);
+    };
+
+    // Add a search bar (geocoder control)
+    var geocoder = L.Control.geocoder({
+      defaultMarkGeocode: false
+    }).on('markgeocode', function(e) {
+      var latlng = e.geocode.center;
+      map.setView(latlng, 13);
+      marker.setLatLng(latlng);  // Move marker to the searched location
+      circle.setLatLng(latlng);  // Update the circle position
+    }).addTo(map);
+  </script>
+</body>
+</html>
