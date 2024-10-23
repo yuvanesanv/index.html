@@ -9,20 +9,146 @@
   <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
   <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h3 {
+      text-align: center;
+      color: #333;
+    }
     #map {
       height: 500px;
       width: 100%;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      position: relative;
+    }
+    label {
+      font-weight: bold;
     }
     #radius {
       margin: 20px 0;
+      width: 100%;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    #confirmBtn {
+      background-color: #007bff;
+      color: white;
+    }
+    #confirmBtn:hover {
+      background-color: #0056b3;
+    }
+    #saveFavoriteBtn {
+      background-color: #28a745; /* Green */
+      color: white;
+    }
+    #saveFavoriteBtn:hover {
+      background-color: #218838;
+    }
+    #showFavoritesBtn {
+      background-color: #6f42c1; /* Purple */
+      color: white;
+    }
+    #showFavoritesBtn:hover {
+      background-color: #5a32a2;
+    }
+    #favoritesList {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .favoriteItem {
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .favoriteItem strong {
+      flex: 1;
+      color: #333;
+    }
+    .viewButton {
+      background-color: #28a745; /* Green */
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .viewButton:hover {
+      background-color: #218838;
+    }
+    .deleteButton {
+      background-color: #dc3545; /* Red */
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .deleteButton:hover {
+      background-color: #c82333;
+    }
+    /* Search icon style */
+    .search-container {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      align-items: center;
+      background: white;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+    #searchInput {
+      border: none;
+      padding: 5px;
+      width: 200px;
+      border-radius: 5px 0 0 5px;
+      outline: none;
+    }
+    #searchBtn {
+      border: none;
+      padding: 5px 10px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      border-radius: 0 5px 5px 0;
+      transition: background-color 0.3s;
+    }
+    #searchBtn:hover {
+      background-color: #0056b3;
     }
   </style>
 </head>
 <body>
   <h3>Set Your Geo-fence Location and Radius</h3>
-  
+
   <!-- Map container -->
   <div id="map"></div>
+
+  <!-- Search Bar -->
+  <div class="search-container">
+    <input id="searchInput" type="text" placeholder="Search for a place..." />
+    <button id="searchBtn">🔍</button>
+  </div>
 
   <!-- Radius slider -->
   <label for="radius">Set Radius (meters): </label>
@@ -32,6 +158,15 @@
 
   <!-- Confirm button -->
   <button id="confirmBtn">Confirm Geo-fence Location</button>
+  
+  <!-- Save as Favorite button -->
+  <button id="saveFavoriteBtn">Save as Favorite</button>
+
+  <!-- Show Favorites button -->
+  <button id="showFavoritesBtn">Show Favorites</button>
+
+  <!-- Favorites List -->
+  <div id="favoritesList"></div>
 
   <script>
     // Initialize the map centered on a default location
@@ -69,6 +204,27 @@
       circle.setRadius(radius);  // Update circle radius dynamically
     };
 
+    // Search for a location
+    document.getElementById('searchBtn').onclick = function() {
+      var searchText = document.getElementById('searchInput').value;
+      if (searchText) {
+        var geocoder = L.Control.Geocoder.nominatim();
+        geocoder.geocode(searchText, function(results) {
+          if (results && results.length > 0) {
+            var latLng = results[0].center;
+            marker.setLatLng(latLng);  // Move marker to searched location
+            circle.setLatLng(latLng);  // Update circle position
+            map.setView(latLng, 13);  // Center map on the searched location
+            marker.dragging.enable(); // Enable dragging after search
+          } else {
+            alert('Location not found.');
+          }
+        });
+      } else {
+        alert('Please enter a location to search.');
+      }
+    };
+
     // Confirm button click event
     document.getElementById('confirmBtn').onclick = function() {
       var lat = marker.getLatLng().lat;
@@ -84,15 +240,64 @@
       alert(`Geo-fence location and radius have been sent to Blynk! \nLatitude: ${lat} \nLongitude: ${lng} \nRadius: ${radius} meters`);
     };
 
-    // Add a search bar (geocoder control)
-    var geocoder = L.Control.geocoder({
-      defaultMarkGeocode: false
-    }).on('markgeocode', function(e) {
-      var latlng = e.geocode.center;
-      map.setView(latlng, 13);
-      marker.setLatLng(latlng);  // Move marker to the searched location
-      circle.setLatLng(latlng);  // Update the circle position
-    }).addTo(map);
+    // Favorites feature
+    var favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+
+    // Save favorite place
+    document.getElementById('saveFavoriteBtn').onclick = function() {
+      var latLng = marker.getLatLng();
+      var favoriteName = prompt("Enter a name for this favorite location:", "My Favorite Place");
+      if (favoriteName) {
+        favorites.push({
+          name: favoriteName,
+          lat: latLng.lat,
+          lng: latLng.lng
+        });
+        localStorage.setItem('favorites', JSON.stringify(favorites));
+        updateFavoritesList();
+        alert('Favorite location saved!');
+      }
+    };
+
+    // Show favorites list
+    document.getElementById('showFavoritesBtn').onclick = function() {
+      var favoritesContainer = document.getElementById('favoritesList');
+      favoritesContainer.style.display = favoritesContainer.style.display === 'none' ? 'block' : 'none';
+    };
+
+    // Update the favorites list display
+    function updateFavoritesList() {
+      var favoritesContainer = document.getElementById('favoritesList');
+      favoritesContainer.innerHTML = '';
+      favorites.forEach((favorite, index) => {
+        var favoriteItem = document.createElement('div');
+        favoriteItem.className = 'favoriteItem';
+        favoriteItem.innerHTML = `<strong>${favorite.name}</strong>
+          <button class="viewButton" onclick="viewFavorite(${index})">View</button>
+          <button class="deleteButton" onclick="deleteFavorite(${index})">Delete</button>`;
+        favoritesContainer.appendChild(favoriteItem);
+      });
+    }
+
+    // View a saved favorite place
+    window.viewFavorite = function(index) {
+      var favorite = favorites[index];
+      marker.setLatLng([favorite.lat, favorite.lng]);  // Move marker to favorite location
+      circle.setLatLng([favorite.lat, favorite.lng]);  // Update circle position
+      map.setView([favorite.lat, favorite.lng], 13);  // Center map on the favorite location
+      marker.dragging.enable(); // Enable dragging after viewing a favorite
+    }
+
+    // Delete a saved favorite place
+    window.deleteFavorite = function(index) {
+      favorites.splice(index, 1);
+      localStorage.setItem('favorites', JSON.stringify(favorites));
+      updateFavoritesList();
+      alert('Favorite location deleted!');
+    }
+
+    // Initialize the favorites list on page load
+    updateFavoritesList();
   </script>
 </body>
 </html>
